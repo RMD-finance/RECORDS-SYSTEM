@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Communication Tracking System</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: {
+            navy: { 950: '#0B1F33', 900: '#0F2A43', 800: '#132F4C', 700: '#1F4A73', 600: '#2A5C8A' },
+            canvas: '#F5F6F8',
+            line: '#E1E5EA',
+            ink: '#101826',
+            muted: '#5B6472',
+            amber: { 100: '#F6E9D6', 500: '#C8862A', 600: '#B8791F', 700: '#996318' },
+            teal: { 100: '#DEEBE7', 600: '#2F6F62', 700: '#255A50' },
+            brick: { 100: '#F5DFDD', 600: '#B23A34', 700: '#96302B' }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body { background: #F5F6F8; font-variant-numeric: tabular-nums; }
+    ::-webkit-scrollbar { height: 8px; width: 8px; }
+    ::-webkit-scrollbar-thumb { background: #C7CDD6; border-radius: 4px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin .7s linear infinite; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .fade-in { animation: fadeIn .12s ease-out; }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+    .toast-in { animation: toastIn .18s ease-out; }
+  </style>
+</head>
+<body class="min-h-screen font-sans text-ink antialiased">
+
+  <!-- ===================== SIGN-IN GATE ===================== -->
+  <!-- App-native login: a username/password stored (hashed, salted)
+       in the hidden "Users" sheet tab. There's no self-service
+       sign-up — only an Admin can create accounts, from the "Manage
+       users" panel once signed in. See Code.gs for the one-time setup
+       that creates the first admin account. -->
+  <div id="signInGate" class="min-h-screen flex items-center justify-center px-4 py-10">
+    <div class="bg-white border border-line rounded-lg shadow-sm max-w-sm w-full p-6">
+      <div class="text-center mb-5">
+        <div class="w-11 h-11 rounded-md bg-navy-950 flex items-center justify-center mx-auto mb-4">
+          <svg viewBox="0 0 20 20" class="w-5 h-5 text-amber-500" fill="none">
+            <path d="M3 5.5h14a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1v-7a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M2.5 6l7.5 5 7.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h1 class="text-[16px] font-semibold text-ink">Communication Tracking System</h1>
+        <p class="text-[12.5px] text-muted mt-1">Sign in to continue.</p>
+      </div>
+
+      <div id="gateChecking" class="hidden flex-col items-center gap-2.5 py-6 text-muted text-[13px]">
+        <svg class="w-5 h-5 spinner text-navy-600" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/>
+          <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        Restoring your session…
+      </div>
+
+      <div id="gateForms">
+        <form id="loginForm" class="space-y-3">
+          <div>
+            <label class="block text-[12.5px] font-medium text-ink mb-1" for="loginUsername">Username</label>
+            <input type="text" id="loginUsername" autocomplete="username" required
+              class="w-full px-3 py-2 border border-line rounded-md text-[13.5px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+          </div>
+          <div>
+            <label class="block text-[12.5px] font-medium text-ink mb-1" for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" autocomplete="current-password" required
+              class="w-full px-3 py-2 border border-line rounded-md text-[13.5px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+          </div>
+          <p id="loginError" class="hidden text-[12.5px] text-brick-600 leading-relaxed"></p>
+          <button type="submit" id="loginSubmitBtn"
+            class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-navy-700 hover:bg-navy-800 text-white text-[13px] font-medium disabled:opacity-60">
+            <svg id="loginSpinner" class="hidden w-3.5 h-3.5 spinner" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/>
+              <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <span id="loginSubmitLabel">Log in</span>
+          </button>
+        </form>
+        <p class="text-[11.5px] text-muted text-center mt-4">Don't have an account? Ask your administrator to create one for you.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== APP SHELL (hidden until signed in) ===================== -->
+  <div id="appShell" class="hidden">
+
+    <header class="sticky top-0 z-30 bg-navy-950 text-white border-b border-navy-800">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-md bg-amber-500 flex items-center justify-center shrink-0">
+            <svg viewBox="0 0 20 20" class="w-5 h-5 text-navy-950" fill="none">
+              <path d="M3 5.5h14a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1v-7a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M2.5 6l7.5 5 7.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <h1 class="text-[15px] font-semibold leading-tight truncate">Communication Tracking System</h1>
+            <p class="text-[12px] text-white/60 leading-tight">Port communications log</p>
+          </div>
+        </div>
+        <div id="encoderChip" class="hidden sm:flex items-center gap-1.5 bg-navy-800 border border-navy-700 rounded-full pl-1.5 pr-1.5 py-1 text-[12px] text-white/80 shrink-0">
+          <span id="encoderInitial" class="w-5 h-5 rounded-full bg-amber-500 text-navy-950 flex items-center justify-center text-[10px] font-semibold">–</span>
+          <span id="encoderEmailLabel"></span>
+          <button type="button" id="manageUsersBtn" title="Manage users" class="hidden w-5 h-5 rounded-full hover:bg-navy-700 flex items-center justify-center text-white/70 hover:text-white">
+            <svg viewBox="0 0 16 16" class="w-3 h-3" fill="none">
+              <circle cx="5.5" cy="5" r="2" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M1.8 13c0-2.1 1.7-3.7 3.7-3.7s3.7 1.6 3.7 3.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+              <circle cx="11.3" cy="5.3" r="1.6" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M9.6 9.5c1.7.3 2.9 1.6 3 3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button type="button" id="signOutBtn" title="Sign out"
+            class="w-5 h-5 rounded-full hover:bg-navy-700 flex items-center justify-center text-white/70 hover:text-white">
+            <svg viewBox="0 0 16 16" class="w-3 h-3" fill="none">
+              <path d="M6 2H3.5A1.5 1.5 0 002 3.5v9A1.5 1.5 0 003.5 14H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 5l3 3-3 3M13 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+      <!-- ===================== STAT STRIP ===================== -->
+      <section class="grid grid-cols-3 gap-2 sm:gap-3">
+        <div class="bg-white border border-line rounded-lg px-3 sm:px-4 py-3.5 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-md bg-navy-950/5 flex items-center justify-center text-navy-700 shrink-0">
+            <svg viewBox="0 0 18 18" class="w-4 h-4" fill="none"><path d="M3 4.5h12M3 9h12M3 13.5h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[19px] font-semibold leading-tight" id="statTotal">0</p>
+            <p class="text-[12px] text-muted leading-tight">Total records</p>
+          </div>
+        </div>
+        <div class="bg-white border border-line rounded-lg px-3 sm:px-4 py-3.5 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-md bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+            <svg viewBox="0 0 18 18" class="w-4 h-4" fill="none"><rect x="3" y="3.5" width="12" height="11" rx="1.2" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h12" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 2v3M11.5 2v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[19px] font-semibold leading-tight" id="statToday">0</p>
+            <p class="text-[12px] text-muted leading-tight">Logged today</p>
+          </div>
+        </div>
+        <div class="bg-white border border-line rounded-lg px-3 sm:px-4 py-3.5 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-md bg-navy-950/5 flex items-center justify-center text-muted shrink-0">
+            <svg viewBox="0 0 18 18" class="w-4 h-4" fill="none"><rect x="2" y="4" width="14" height="3" rx="0.6" stroke="currentColor" stroke-width="1.4"/><path d="M3 7v6.5A1.5 1.5 0 004.5 15h9a1.5 1.5 0 001.5-1.5V7" stroke="currentColor" stroke-width="1.4"/><path d="M7.2 10h3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[19px] font-semibold leading-tight" id="statArchived">0</p>
+            <p class="text-[12px] text-muted leading-tight">Archived</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== FORM PANEL ===================== -->
+      <section id="formPanel" class="bg-white border border-line rounded-lg overflow-hidden">
+
+        <!-- Collapsed state: just the call-to-action. This is what's
+             visible by default; the form itself only renders once the
+             person asks for it. -->
+        <div id="formPanelCollapsed" class="px-5 py-5 flex items-center justify-between gap-3 flex-wrap">
+          <p class="text-[12.5px] text-muted">Create a record for an outgoing or incoming communication.</p>
+          <button type="button" id="newEntryBtn"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-md bg-navy-700 hover:bg-navy-800 text-white text-[13px] font-medium shrink-0">
+            <svg viewBox="0 0 14 14" class="w-3.5 h-3.5" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            New communication entry
+          </button>
+        </div>
+
+        <!-- Expanded state: the full form. Shown for both "new entry"
+             and "edit" — formTitle/formSubtitle/saveBtnLabel switch
+             between the two modes. -->
+        <div id="formPanelExpanded" class="hidden">
+          <div class="px-5 py-4 border-b border-line">
+            <h2 id="formTitle" class="text-[15px] font-semibold">New communication entry</h2>
+            <p id="formSubtitle" class="text-[12.5px] text-muted mt-0.5">Fields marked with * are required.</p>
+          </div>
+
+          <form id="commForm" class="px-5 py-5 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
+            <div>
+              <label class="block text-[13px] font-medium text-ink mb-1.5" for="fieldNcnPreview">Communication control number</label>
+              <input type="text" id="fieldNcnPreview" readonly
+                class="w-full px-3 py-2 border border-line rounded-md text-[13.5px] bg-canvas text-muted cursor-not-allowed">
+            </div>
+            <div>
+              <label class="block text-[13px] font-medium text-ink mb-1.5" for="fieldCommDate">Communication date <span class="text-brick-600">*</span></label>
+              <input type="date" id="fieldCommDate" required
+                class="w-full px-3 py-2 border border-line rounded-md text-[13.5px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+            </div>
+
+            <div>
+              <label class="block text-[13px] font-medium text-ink mb-1.5" for="fieldRefNo">Communication reference no.</label>
+              <input type="text" id="fieldRefNo" placeholder="Optional"
+                class="w-full px-3 py-2 border border-line rounded-md text-[13.5px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+            </div>
+            <div>
+              <label class="block text-[13px] font-medium text-ink mb-1.5" for="fieldFrom">From <span class="text-brick-600">*</span></label>
+              <input type="text" id="fieldFrom" required placeholder="e.g. Administrative Division"
+                class="w-full px-3 py-2 border border-line rounded-md text-[13.5px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-[13px] font-medium text-ink mb-1.5">To (recipients) <span class="text-brick-600">*</span></label>
+              <div id="toMultiSelectContainer"></div>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-[13px] font-medium text-ink mb-1.5" for="fieldSubject">Subject <span class="text-brick-600">*</span></label>
+              <input type="text" id="fieldSubject" required placeholder="Brief description of the communication"
+                class="w-full px-3 py-2 border border-line rounded-md text-[13.5px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-[13px] font-medium text-ink mb-1.5">Mode of transmittal to PMO NCN <span class="text-brick-600">*</span></label>
+              <div id="modeMultiSelectContainer"></div>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-[13px] font-medium text-ink mb-1.5" for="fieldRemarks">Remarks</label>
+              <textarea id="fieldRemarks" rows="2" placeholder="Optional notes"
+                class="w-full px-3 py-2 border border-line rounded-md text-[13.5px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600 resize-none"></textarea>
+            </div>
+
+            <div class="sm:col-span-2 sm:max-w-xs">
+              <label class="block text-[13px] font-medium text-ink mb-1.5" for="fieldEncoderDisplay">Encoder (logged-in account)</label>
+              <input type="text" id="fieldEncoderDisplay" readonly
+                class="w-full px-3 py-2 border border-line rounded-md text-[13.5px] bg-canvas text-muted cursor-not-allowed">
+            </div>
+
+            <div class="sm:col-span-2 flex items-center justify-end gap-2 pt-3 border-t border-line mt-1">
+              <button type="button" id="cancelFormBtn" class="px-4 py-2 rounded-md border border-line text-[13px] font-medium text-ink hover:bg-canvas">
+                Cancel
+              </button>
+              <button type="submit" id="saveBtn"
+                class="px-4 py-2 rounded-md bg-navy-700 hover:bg-navy-800 text-white text-[13px] font-medium flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <svg id="saveBtnSpinner" class="hidden w-3.5 h-3.5 spinner" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/>
+                  <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                <span id="saveBtnLabel">Save entry</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===================== TABLE PANEL ===================== -->
+      <section class="bg-white border border-line rounded-lg overflow-hidden">
+        <div class="px-5 py-4 border-b border-line flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <div class="flex items-center gap-2 flex-1">
+            <div class="relative flex-1 max-w-sm">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+                <svg viewBox="0 0 20 20" class="w-4 h-4" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l-3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </span>
+              <input type="text" id="searchInput" placeholder="Search control no., subject, sender, recipient…"
+                class="w-full pl-9 pr-3 py-2 border border-line rounded-md text-[13.5px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+            </div>
+            <button type="button" id="refreshBtn" title="Refresh"
+              class="p-2 rounded-md border border-line text-muted hover:bg-canvas hover:text-ink shrink-0">
+              <svg viewBox="0 0 18 18" class="w-4 h-4" fill="none"><path d="M3 5v3.5h3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.7 11.5A5.5 5.5 0 109 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" data-status="Active" class="status-chip px-3 py-1.5 rounded-full text-[12.5px] font-medium bg-navy-950 text-white">Active</button>
+            <button type="button" data-status="Archived" class="status-chip px-3 py-1.5 rounded-full text-[12.5px] font-medium bg-white border border-line text-muted hover:bg-canvas">Archived</button>
+            <button type="button" data-status="All" class="status-chip px-3 py-1.5 rounded-full text-[12.5px] font-medium bg-white border border-line text-muted hover:bg-canvas">All</button>
+          </div>
+        </div>
+
+        <div id="tableLoading" class="py-14 flex flex-col items-center justify-center gap-2 text-muted text-[13px]">
+          <svg class="w-5 h-5 spinner text-navy-600" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/>
+            <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          Loading records…
+        </div>
+
+        <div id="tableContent" class="hidden">
+          <div id="tableWrapper" class="overflow-x-auto">
+            <table class="w-full text-[13px]">
+              <thead>
+                <tr class="bg-canvas text-left text-[12px] text-muted">
+                  <th class="px-4 py-2.5 font-medium">Control no.</th>
+                  <th class="px-4 py-2.5 font-medium">Date</th>
+                  <th class="px-4 py-2.5 font-medium">Subject</th>
+                  <th class="px-4 py-2.5 font-medium">From</th>
+                  <th class="px-4 py-2.5 font-medium">To</th>
+                  <th class="px-4 py-2.5 font-medium">Ref. no.</th>
+                  <th class="px-4 py-2.5 font-medium">Encoder</th>
+                  <th class="px-4 py-2.5 font-medium">Status</th>
+                  <th class="px-4 py-2.5 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+          <div id="tableEmpty" class="hidden py-14 text-center">
+            <p class="text-[13.5px] font-medium text-ink" id="tableEmptyTitle">No communications logged yet.</p>
+            <p class="text-[12.5px] text-muted mt-1" id="tableEmptySubtitle">Entries you save will appear here.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===================== TOASTS ===================== -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-[320px] max-w-[calc(100vw-2rem)]"></div>
+
+  <!-- ===================== CONFIRM MODAL ===================== -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-navy-950/40 px-4">
+    <div class="bg-white rounded-lg shadow-lg max-w-sm w-full p-5 fade-in">
+      <h3 id="confirmTitle" class="text-[15px] font-semibold text-ink"></h3>
+      <p id="confirmMessage" class="text-[13px] text-muted mt-2 leading-relaxed"></p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button type="button" id="confirmCancelBtn" class="px-3.5 py-2 rounded-md border border-line text-[13px] font-medium text-ink hover:bg-canvas">Cancel</button>
+        <button type="button" id="confirmOkBtn" class="px-3.5 py-2 rounded-md text-white text-[13px] font-medium bg-brick-600 hover:bg-brick-700">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MANAGE USERS MODAL (admin only) ===================== -->
+  <div id="usersModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-navy-950/40 px-4 py-8">
+    <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-full flex flex-col fade-in">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
+        <div>
+          <h3 class="text-[15px] font-semibold text-ink">Manage users</h3>
+          <p class="text-[12px] text-muted mt-0.5">Accounts are disabled, never deleted — past entries always keep their original encoder.</p>
+        </div>
+        <button type="button" id="usersModalCloseBtn" class="p-1.5 rounded hover:bg-canvas text-muted hover:text-ink shrink-0">
+          <svg viewBox="0 0 14 14" class="w-4 h-4" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <div class="px-5 py-4 border-b border-line shrink-0">
+        <p class="text-[13px] font-medium text-ink mb-3">Add a user</p>
+        <form id="addUserForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[12px] font-medium text-ink mb-1" for="newUserUsername">Username</label>
+            <input type="text" id="newUserUsername" required
+              class="w-full px-3 py-2 border border-line rounded-md text-[13px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-ink mb-1" for="newUserRole">Role</label>
+            <select id="newUserRole" class="w-full px-3 py-2 border border-line rounded-md text-[13px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600 bg-white">
+              <option value="User">User</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-ink mb-1" for="newUserPassword">Password</label>
+            <input type="password" id="newUserPassword" required
+              class="w-full px-3 py-2 border border-line rounded-md text-[13px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-ink mb-1" for="newUserPasswordConfirm">Confirm password</label>
+            <input type="password" id="newUserPasswordConfirm" required
+              class="w-full px-3 py-2 border border-line rounded-md text-[13px] outline-none focus:ring-2 focus:ring-navy-600/30 focus:border-navy-600">
+          </div>
+          <div class="sm:col-span-2">
+            <p id="addUserError" class="hidden text-[12.5px] text-brick-600 mb-2"></p>
+            <button type="submit" id="addUserBtn"
+              class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-navy-700 hover:bg-navy-800 text-white text-[13px] font-medium disabled:opacity-60">
+              <svg id="addUserSpinner" class="hidden w-3.5 h-3.5 spinner" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/>
+                <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+              <span id="addUserBtnLabel">Add user</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="overflow-y-auto flex-1">
+        <table class="w-full text-[13px]">
+          <thead class="sticky top-0 bg-canvas">
+            <tr class="text-left text-[12px] text-muted">
+              <th class="px-5 py-2.5 font-medium">Username</th>
+              <th class="px-4 py-2.5 font-medium">Role</th>
+              <th class="px-4 py-2.5 font-medium">Status</th>
+              <th class="px-4 py-2.5 font-medium">Created</th>
+              <th class="px-4 py-2.5 font-medium text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody"></tbody>
+        </table>
+        <div id="usersLoading" class="py-10 text-center text-muted text-[13px]">Loading users…</div>
+        <div id="usersEmpty" class="hidden py-10 text-center text-muted text-[13px]">No users yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================= ICONS =========================
+    var ICONS = {
+      edit: '<svg viewBox="0 0 18 18" class="w-4 h-4" fill="none"><path d="M11.5 2.5l4 4L6.5 15.5H2.5v-4l9-9z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+      archive: '<svg viewBox="0 0 18 18" class="w-4 h-4" fill="none"><rect x="2" y="4" width="14" height="3" rx="0.6" stroke="currentColor" stroke-width="1.4"/><path d="M3 7v6.5A1.5 1.5 0 004.5 15h9a1.5 1.5 0 001.5-1.5V7" stroke="currentColor" stroke-width="1.4"/><path d="M7.2 10h3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+      restore: '<svg viewBox="0 0 18 18" class="w-4 h-4" fill="none"><path d="M3 5v3.5h3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.7 11.5A5.5 5.5 0 109 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+      trash: '<svg viewBox="0 0 18 18" class="w-4 h-4" fill="none"><path d="M3.5 5h11M7 5V3.5h4V5m-6 0v9a1 1 0 001 1h6a1 1 0 001-1V5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      check: '<svg viewBox="0 0 16 16" class="w-4 h-4" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      alert: '<svg viewBox="0 0 16 16" class="w-4 h-4" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="10.7" r="0.7" fill="currentColor"/></svg>',
+      close: '<svg viewBox="0 0 14 14" class="w-3.5 h-3.5" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+      plus: '<svg viewBox="0 0 14 14" class="w-3.5 h-3.5" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+    };
+
+    // ========================= CONSTANTS =========================
+    var TO_OPTIONS = [
+      'Jenneliza D. Rebong - Port Manager',
+      'Josephine S. Salosagcol - RMD Manager',
+      'Jornel T. Supremo - VTSD Manager',
+      'Francis Aldrich A. Rubio - TSD Manager',
+      'Dan G. Alano - PPD Manager',
+      'Bernardo M. Prado Jr. - TMO Vitas Manager',
+      'All Port Managers',
+      'All RC Heads'
+    ];
+    var MODE_OPTIONS = ['Postal Mail', 'E-Mail', 'Hand-Carried'];
+    var SESSION_STORAGE_KEY = 'ncts_session_token';
+
+    // ========================= STATE =========================
+    var allRecords = [];
+    var editingNcn = null;      // null = create mode, else the NCN being edited
+    var currentStatusFilter = 'Active';
+    var pendingConfirmAction = null;
+    var sessionToken = '';
+    var currentUsername = '';
+    var isAdminUser = false;
+    var appInitialized = false; // guards against re-attaching listeners on re-login
+    var toMS, modeMS;
+
+    // ========================= UTILITIES =========================
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/[&<>"']/g, function(c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function errMsg(err) {
+      return (err && err.message) ? err.message : String(err);
+    }
+
+    function todayIso() {
+      var d = new Date();
+      var m = ('0' + (d.getMonth() + 1)).slice(-2);
+      var day = ('0' + d.getDate()).slice(-2);
+      return d.getFullYear() + '-' + m + '-' + day;
+    }
+
+    function debounce(fn, wait) {
+      var t;
+      return function() {
+        var args = arguments;
+        clearTimeout(t);
+        t = setTimeout(function() { fn.apply(null, args); }, wait);
+      };
+    }
+
+    function readStoredToken_() {
+      try { return localStorage.getItem(SESSION_STORAGE_KEY); } catch (e) { return null; }
+    }
+    function writeStoredToken_(token) {
+      try { localStorage.setItem(SESSION_STORAGE_KEY, token); } catch (e) { /* storage unavailable; session stays in-memory only */ }
+    }
+    function clearStoredToken_() {
+      try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch (e) { /* ignore */ }
+    }
+
+    /**
+     * Every protected server call resolves through this. If the
+     * session expired or the account was disabled (Code.gs replies
+     * with authError:true), it bumps the person back to the sign-in
+     * gate instead of trying to render whatever came back.
+     */
+    function handleApiResponse(res, onOk) {
+      if (res && res.authError) {
+        showToast('error', res.message || 'Your session expired. Please sign in again.');
+        handleSignOut();
+        return;
+      }
+      onOk(res);
+    }
+
+    // ========================= MULTI-SELECT COMPONENT =========================
+    // Renders a chip-based multi-select that supports picking from a
+    // pre-populated option list AND typing arbitrary custom entries.
+    // Returns { getValues, setValues, clear }.
+    function createMultiSelect(container, opts) {
+      var state = { selected: (opts.values || []).slice(), options: (opts.options || []).slice() };
+
+      container.innerHTML =
+        '<div class="ms-shell relative">' +
+          '<div class="ms-box flex flex-wrap items-center gap-1.5 min-h-[42px] px-2.5 py-1.5 bg-white border border-line rounded-md cursor-text focus-within:ring-2 focus-within:ring-navy-600/30 focus-within:border-navy-600">' +
+            '<div class="ms-chips flex flex-wrap gap-1.5"></div>' +
+            '<input type="text" class="ms-input flex-1 min-w-[160px] outline-none text-[13.5px] py-0.5 placeholder:text-muted/60" placeholder="' + escapeHtml(opts.placeholder || 'Select or type to add…') + '">' +
+          '</div>' +
+          '<div class="ms-panel hidden absolute left-0 right-0 mt-1 bg-white border border-line rounded-md shadow-md max-h-56 overflow-y-auto z-20 fade-in"></div>' +
+        '</div>';
+
+      var shell = container.querySelector('.ms-shell');
+      var box = container.querySelector('.ms-box');
+      var chipsEl = container.querySelector('.ms-chips');
+      var input = container.querySelector('.ms-input');
+      var panel = container.querySelector('.ms-panel');
+
+      function renderChips() {
+        chipsEl.innerHTML = state.selected.map(function(val, i) {
+          return '<span class="inline-flex items-center gap-1 bg-navy-950/[.05] border border-line text-ink text-[12.5px] pl-2 pr-1 py-0.5 rounded-full">' +
+            escapeHtml(val) +
+            '<button type="button" data-idx="' + i + '" class="ms-remove w-4 h-4 rounded-full hover:bg-navy-950/10 flex items-center justify-center text-muted">' + ICONS.close + '</button>' +
+          '</span>';
+        }).join('');
+        chipsEl.querySelectorAll('.ms-remove').forEach(function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            state.selected.splice(parseInt(btn.getAttribute('data-idx'), 10), 1);
+            renderChips();
+            renderPanel();
+          });
+        });
+      }
+
+      function renderPanel() {
+        var query = input.value.trim().toLowerCase();
+        var filtered = state.options.filter(function(o) { return o.toLowerCase().indexOf(query) !== -1; });
+        var html = '';
+
+        if (filtered.length) {
+          html += filtered.map(function(o) {
+            var checked = state.selected.indexOf(o) !== -1;
+            return '<button type="button" data-val="' + escapeHtml(o) + '" class="ms-option w-full text-left px-3 py-2 text-[13px] flex items-center gap-2 hover:bg-canvas ' + (checked ? 'bg-amber-100/50' : '') + '">' +
+              '<span class="w-4 h-4 rounded border ' + (checked ? 'bg-navy-700 border-navy-700' : 'border-line') + ' flex items-center justify-center shrink-0 text-white">' + (checked ? ICONS.check.replace('w-4 h-4', 'w-2.5 h-2.5') : '') + '</span>' +
+              '<span>' + escapeHtml(o) + '</span>' +
+            '</button>';
+          }).join('');
+        }
+
+        var typed = input.value.trim();
+        if (typed && state.options.indexOf(typed) === -1 && state.selected.indexOf(typed) === -1) {
+          html += '<button type="button" class="ms-add w-full text-left px-3 py-2 text-[13px] text-navy-700 hover:bg-canvas flex items-center gap-2 border-t border-line">' +
+            ICONS.plus + 'Add "' + escapeHtml(typed) + '"' +
+          '</button>';
+        }
+
+        if (!html) html = '<div class="px-3 py-3 text-[12.5px] text-muted">No matches — keep typing to add a custom entry.</div>';
+        panel.innerHTML = html;
+
+        panel.querySelectorAll('.ms-option').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var val = btn.getAttribute('data-val');
+            var idx = state.selected.indexOf(val);
+            if (idx === -1) state.selected.push(val); else state.selected.splice(idx, 1);
+            renderChips();
+            renderPanel();
+            input.focus();
+          });
+        });
+        var addBtn = panel.querySelector('.ms-add');
+        if (addBtn) addBtn.addEventListener('click', addCustom);
+      }
+
+      function addCustom() {
+        var val = input.value.trim();
+        if (!val) return;
+        if (state.selected.indexOf(val) === -1) state.selected.push(val);
+        input.value = '';
+        renderChips();
+        renderPanel();
+        input.focus();
+      }
+
+      function openPanel() { panel.classList.remove('hidden'); renderPanel(); }
+      function closePanel() { panel.classList.add('hidden'); }
+
+      input.addEventListener('focus', openPanel);
+      input.addEventListener('input', renderPanel);
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); addCustom(); }
+        else if (e.key === 'Backspace' && !input.value && state.selected.length) {
+          state.selected.pop();
+          renderChips();
+          renderPanel();
+        } else if (e.key === 'Escape') { closePanel(); input.blur(); }
+      });
+      box.addEventListener('click', function() { input.focus(); });
+      document.addEventListener('click', function(e) {
+        if (!shell.contains(e.target)) closePanel();
+      });
+
+      renderChips();
+
+      return {
+        getValues: function() { return state.selected.slice(); },
+        setValues: function(arr) { state.selected = (arr || []).slice(); renderChips(); },
+        clear: function() { state.selected = []; renderChips(); }
+      };
+    }
+
+    // ========================= SIGN-IN GATE =========================
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('loginForm').addEventListener('submit', handleLoginSubmit);
+      document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
+
+      var storedToken = readStoredToken_();
+      if (!storedToken) return; // login form is already the default visible state
+
+      document.getElementById('gateForms').classList.add('hidden');
+      var checking = document.getElementById('gateChecking');
+      checking.classList.remove('hidden');
+      checking.classList.add('flex');
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success) {
+            onAuthSuccess(storedToken, res.username, res.isAdmin);
+          } else {
+            clearStoredToken_();
+            checking.classList.add('hidden');
+            document.getElementById('gateForms').classList.remove('hidden');
+          }
+        })
+        .withFailureHandler(function() {
+          clearStoredToken_();
+          checking.classList.add('hidden');
+          document.getElementById('gateForms').classList.remove('hidden');
+        })
+        .getSessionUser(storedToken);
+    });
+
+    function setAuthLoading(which, loading) {
+      var btn = document.getElementById(which + 'SubmitBtn');
+      var spinner = document.getElementById(which + 'Spinner');
+      var label = document.getElementById(which + 'SubmitLabel');
+      btn.disabled = loading;
+      spinner.classList.toggle('hidden', !loading);
+      label.textContent = loading ? 'Signing in…' : 'Log in';
+    }
+
+    function showAuthError(id, msg) {
+      var el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideAuthError(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      hideAuthError('loginError');
+      var username = document.getElementById('loginUsername').value.trim();
+      var password = document.getElementById('loginPassword').value;
+
+      setAuthLoading('login', true);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setAuthLoading('login', false);
+          if (res && res.success) {
+            onAuthSuccess(res.token, res.username, res.isAdmin);
+          } else {
+            showAuthError('loginError', (res && res.message) || 'Sign-in failed.');
+          }
+        })
+        .withFailureHandler(function(err) {
+          setAuthLoading('login', false);
+          showAuthError('loginError', errMsg(err));
+        })
+        .loginUser(username, password);
+    }
+
+    function onAuthSuccess(token, username, isAdminFlag) {
+      sessionToken = token;
+      currentUsername = username;
+      isAdminUser = !!isAdminFlag;
+      writeStoredToken_(token);
+      enterApp();
+    }
+
+    function handleSignOut() {
+      google.script.run.logoutUser(sessionToken); // fire and forget
+      sessionToken = '';
+      currentUsername = '';
+      isAdminUser = false;
+      clearStoredToken_();
+      closeUsersModal();
+
+      document.getElementById('appShell').classList.add('hidden');
+      document.getElementById('gateChecking').classList.add('hidden');
+      document.getElementById('gateChecking').classList.remove('flex');
+      document.getElementById('gateForms').classList.remove('hidden');
+      document.getElementById('loginUsername').value = '';
+      document.getElementById('loginPassword').value = '';
+      hideAuthError('loginError');
+      document.getElementById('signInGate').classList.remove('hidden');
+    }
+
+    function enterApp() {
+      document.getElementById('signInGate').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
+
+      document.getElementById('encoderEmailLabel').textContent = currentUsername;
+      document.getElementById('encoderInitial').textContent = currentUsername.trim().charAt(0).toUpperCase() || '?';
+      document.getElementById('fieldEncoderDisplay').value = currentUsername;
+      document.getElementById('manageUsersBtn').classList.toggle('hidden', !isAdminUser);
+
+      if (!appInitialized) {
+        appInitialized = true;
+        initApp();
+      } else {
+        loadRecords();
+      }
+    }
+
+    // ========================= APP INIT =========================
+
+    function initApp() {
+      toMS = createMultiSelect(document.getElementById('toMultiSelectContainer'), {
+        options: TO_OPTIONS,
+        placeholder: 'Select recipient(s) or type to add…'
+      });
+      modeMS = createMultiSelect(document.getElementById('modeMultiSelectContainer'), {
+        options: MODE_OPTIONS,
+        placeholder: 'Select mode(s) or type to add…'
+      });
+
+      document.getElementById('fieldCommDate').value = todayIso();
+      updateNcnPreview();
+
+      document.getElementById('newEntryBtn').addEventListener('click', function() {
+        resetForm();
+        openForm();
+        document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      document.getElementById('cancelFormBtn').addEventListener('click', function() {
+        resetForm();
+        closeForm();
+      });
+      document.getElementById('commForm').addEventListener('submit', handleSubmit);
+      document.getElementById('searchInput').addEventListener('input', debounce(renderTable, 120));
+      document.getElementById('refreshBtn').addEventListener('click', loadRecords);
+      document.querySelectorAll('.status-chip').forEach(function(chip) {
+        chip.addEventListener('click', function() { setStatusFilter(chip.getAttribute('data-status')); });
+      });
+      document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirm);
+      document.getElementById('confirmOkBtn').addEventListener('click', function() {
+        var action = pendingConfirmAction;
+        closeConfirm();
+        if (action) action();
+      });
+
+      document.getElementById('manageUsersBtn').addEventListener('click', openUsersModal);
+      document.getElementById('usersModalCloseBtn').addEventListener('click', closeUsersModal);
+      document.getElementById('addUserForm').addEventListener('submit', handleAddUser);
+
+      loadRecords();
+    }
+
+    function updateNcnPreview() {
+      var d = new Date();
+      var y = d.getFullYear();
+      var m = ('0' + (d.getMonth() + 1)).slice(-2);
+      var day = ('0' + d.getDate()).slice(-2);
+      document.getElementById('fieldNcnPreview').value = 'NCN' + y + m + day + '-XXX (assigned on save)';
+    }
+
+    // ========================= FORM PANEL OPEN / CLOSE =========================
+
+    function openForm() {
+      document.getElementById('formPanelCollapsed').classList.add('hidden');
+      document.getElementById('formPanelExpanded').classList.remove('hidden');
+    }
+
+    function closeForm() {
+      document.getElementById('formPanelExpanded').classList.add('hidden');
+      document.getElementById('formPanelCollapsed').classList.remove('hidden');
+    }
+
+    // ========================= DATA LOADING =========================
+
+    function loadRecords() {
+      showTableLoading(true);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          showTableLoading(false);
+          handleApiResponse(res, function(res) {
+            if (res && res.success) {
+              allRecords = res.data || [];
+              renderStats();
+              renderTable();
+            } else {
+              showToast('error', (res && res.message) || 'Failed to load records.');
+            }
+          });
+        })
+        .withFailureHandler(function(err) {
+          showTableLoading(false);
+          showToast('error', 'Failed to load records: ' + errMsg(err));
+        })
+        .getAllCommunications(sessionToken);
+    }
+
+    function showTableLoading(loading) {
+      document.getElementById('tableLoading').classList.toggle('hidden', !loading);
+      document.getElementById('tableContent').classList.toggle('hidden', loading);
+    }
+
+    function renderStats() {
+      var todayStr = todayIso();
+      var todayCount = allRecords.filter(function(r) { return (r.timestampCreated || '').slice(0, 10) === todayStr; }).length;
+      var archivedCount = allRecords.filter(function(r) { return r.status === 'Archived'; }).length;
+      document.getElementById('statTotal').textContent = allRecords.length;
+      document.getElementById('statToday').textContent = todayCount;
+      document.getElementById('statArchived').textContent = archivedCount;
+    }
+
+    // ========================= TABLE / SEARCH =========================
+
+    function setStatusFilter(status) {
+      currentStatusFilter = status;
+      document.querySelectorAll('.status-chip').forEach(function(chip) {
+        var active = chip.getAttribute('data-status') === status;
+        chip.classList.toggle('bg-navy-950', active);
+        chip.classList.toggle('text-white', active);
+        chip.classList.toggle('bg-white', !active);
+        chip.classList.toggle('border', !active);
+        chip.classList.toggle('border-line', !active);
+        chip.classList.toggle('text-muted', !active);
+      });
+      renderTable();
+    }
+
+    function renderTable() {
+      var q = document.getElementById('searchInput').value.trim().toLowerCase();
+      var rows = allRecords.filter(function(r) {
+        if (currentStatusFilter !== 'All' && r.status !== currentStatusFilter) return false;
+        if (!q) return true;
+        var haystack = [r.ncn, r.subject, r.from, r.to, r.refNo, r.encoder].join(' ').toLowerCase();
+        return haystack.indexOf(q) !== -1;
+      });
+
+      var tbody = document.getElementById('tableBody');
+      var wrapper = document.getElementById('tableWrapper');
+      var emptyEl = document.getElementById('tableEmpty');
+
+      if (!rows.length) {
+        tbody.innerHTML = '';
+        wrapper.classList.add('hidden');
+        document.getElementById('tableEmptyTitle').textContent = allRecords.length ? 'No matches found.' : 'No communications logged yet.';
+        document.getElementById('tableEmptySubtitle').textContent = allRecords.length ? 'Try a different search term or switch the status filter.' : 'Use "New communication entry" above to add one.';
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      wrapper.classList.remove('hidden');
+      tbody.innerHTML = rows.map(rowHtml).join('');
+
+      tbody.querySelectorAll('.act-edit').forEach(function(btn) {
+        btn.addEventListener('click', function() { loadIntoForm(btn.getAttribute('data-ncn')); });
+      });
+      tbody.querySelectorAll('.act-archive').forEach(function(btn) {
+        btn.addEventListener('click', function() { handleArchive(btn.getAttribute('data-ncn')); });
+      });
+      tbody.querySelectorAll('.act-delete').forEach(function(btn) {
+        btn.addEventListener('click', function() { handleDelete(btn.getAttribute('data-ncn')); });
+      });
+    }
+
+    function rowHtml(r) {
+      var statusBadge = r.status === 'Archived'
+        ? '<span class="inline-flex items-center gap-1.5 text-[12px] text-muted"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Archived</span>'
+        : '<span class="inline-flex items-center gap-1.5 text-[12px] text-teal-700"><span class="w-1.5 h-1.5 rounded-full bg-teal-600"></span>Active</span>';
+
+      return '<tr class="border-t border-line hover:bg-canvas/70 align-top">' +
+        '<td class="px-4 py-3 font-medium text-navy-800 whitespace-nowrap">' + escapeHtml(r.ncn) + '</td>' +
+        '<td class="px-4 py-3 whitespace-nowrap text-muted">' + escapeHtml(r.commDate) + '</td>' +
+        '<td class="px-4 py-3 max-w-[220px]"><div class="truncate" title="' + escapeHtml(r.subject) + '">' + escapeHtml(r.subject) + '</div></td>' +
+        '<td class="px-4 py-3 whitespace-nowrap">' + escapeHtml(r.from) + '</td>' +
+        '<td class="px-4 py-3 max-w-[200px]"><div class="truncate" title="' + escapeHtml(r.to) + '">' + escapeHtml(r.to) + '</div></td>' +
+        '<td class="px-4 py-3 whitespace-nowrap text-muted">' + escapeHtml(r.refNo || '—') + '</td>' +
+        '<td class="px-4 py-3 whitespace-nowrap text-muted">' + escapeHtml(r.encoder) + '</td>' +
+        '<td class="px-4 py-3 whitespace-nowrap">' + statusBadge + '</td>' +
+        '<td class="px-4 py-3 whitespace-nowrap text-right">' +
+          '<div class="inline-flex items-center gap-1">' +
+            '<button type="button" data-ncn="' + escapeHtml(r.ncn) + '" class="act-edit p-1.5 rounded hover:bg-navy-950/5 text-navy-700" title="Edit">' + ICONS.edit + '</button>' +
+            '<button type="button" data-ncn="' + escapeHtml(r.ncn) + '" class="act-archive p-1.5 rounded hover:bg-navy-950/5 text-amber-600" title="' + (r.status === 'Archived' ? 'Restore' : 'Archive') + '">' + (r.status === 'Archived' ? ICONS.restore : ICONS.archive) + '</button>' +
+            '<button type="button" data-ncn="' + escapeHtml(r.ncn) + '" class="act-delete p-1.5 rounded hover:bg-brick-100 text-brick-600" title="Delete">' + ICONS.trash + '</button>' +
+          '</div>' +
+        '</td>' +
+      '</tr>';
+    }
+
+    // ========================= FORM: CREATE / EDIT =========================
+
+    function collectFormData() {
+      return {
+        commDate: document.getElementById('fieldCommDate').value,
+        refNo: document.getElementById('fieldRefNo').value.trim(),
+        to: toMS.getValues(),
+        from: document.getElementById('fieldFrom').value.trim(),
+        subject: document.getElementById('fieldSubject').value.trim(),
+        mode: modeMS.getValues(),
+        remarks: document.getElementById('fieldRemarks').value.trim()
+      };
+    }
+
+    function validateForm(data) {
+      var errors = [];
+      if (!data.commDate) errors.push('fieldCommDate');
+      if (!data.from) errors.push('fieldFrom');
+      if (!data.subject) errors.push('fieldSubject');
+      if (!data.to.length) errors.push('toMultiSelectContainer');
+      if (!data.mode.length) errors.push('modeMultiSelectContainer');
+      return errors;
+    }
+
+    function markFieldError(id) {
+      if (id === 'toMultiSelectContainer' || id === 'modeMultiSelectContainer') {
+        var box = document.querySelector('#' + id + ' .ms-box');
+        if (box) box.classList.add('ring-2', 'ring-brick-600', 'border-brick-600');
+        return;
+      }
+      var el = document.getElementById(id);
+      if (el) el.classList.add('ring-2', 'ring-brick-600', 'border-brick-600');
+    }
+
+    function clearFieldErrors() {
+      ['fieldCommDate', 'fieldFrom', 'fieldSubject'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.remove('ring-2', 'ring-brick-600', 'border-brick-600');
+      });
+      ['toMultiSelectContainer', 'modeMultiSelectContainer'].forEach(function(id) {
+        var box = document.querySelector('#' + id + ' .ms-box');
+        if (box) box.classList.remove('ring-2', 'ring-brick-600', 'border-brick-600');
+      });
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      clearFieldErrors();
+
+      var data = collectFormData();
+      var errors = validateForm(data);
+      if (errors.length) {
+        errors.forEach(markFieldError);
+        showToast('error', 'Please complete the required fields.');
+        return;
+      }
+
+      setSaving(true);
+
+      if (editingNcn) {
+        data.ncn = editingNcn;
+        google.script.run
+          .withSuccessHandler(function(res) {
+            setSaving(false);
+            handleApiResponse(res, function(res) {
+              if (res && res.success) {
+                showToast('success', res.message || 'Record updated.');
+                resetForm();
+                closeForm();
+                loadRecords();
+              } else {
+                showToast('error', (res && res.message) || 'Update failed.');
+              }
+            });
+          })
+          .withFailureHandler(function(err) {
+            setSaving(false);
+            showToast('error', 'Update failed: ' + errMsg(err));
+          })
+          .updateCommunication(sessionToken, data);
+      } else {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            setSaving(false);
+            handleApiResponse(res, function(res) {
+              if (res && res.success) {
+                showToast('success', res.message || 'Record saved.');
+                resetForm();
+                closeForm();
+                loadRecords();
+              } else {
+                showToast('error', (res && res.message) || 'Save failed.');
+              }
+            });
+          })
+          .withFailureHandler(function(err) {
+            setSaving(false);
+            showToast('error', 'Save failed: ' + errMsg(err));
+          })
+          .createCommunication(sessionToken, data);
+      }
+    }
+
+    function setSaving(saving) {
+      var btn = document.getElementById('saveBtn');
+      btn.disabled = saving;
+      document.getElementById('saveBtnSpinner').classList.toggle('hidden', !saving);
+      document.getElementById('saveBtnLabel').textContent = saving
+        ? (editingNcn ? 'Updating…' : 'Saving…')
+        : (editingNcn ? 'Update entry' : 'Save entry');
+    }
+
+    function loadIntoForm(ncn) {
+      var rec = allRecords.filter(function(r) { return r.ncn === ncn; })[0];
+      if (!rec) { showToast('error', 'Record not found.'); return; }
+
+      editingNcn = ncn;
+      clearFieldErrors();
+
+      document.getElementById('fieldNcnPreview').value = rec.ncn;
+      document.getElementById('fieldCommDate').value = rec.commDate;
+      document.getElementById('fieldRefNo').value = rec.refNo || '';
+      toMS.setValues(rec.to ? rec.to.split(';').map(function(s) { return s.trim(); }).filter(Boolean) : []);
+      document.getElementById('fieldFrom').value = rec.from || '';
+      document.getElementById('fieldSubject').value = rec.subject || '';
+      modeMS.setValues(rec.mode ? rec.mode.split(';').map(function(s) { return s.trim(); }).filter(Boolean) : []);
+      document.getElementById('fieldRemarks').value = rec.remarks || '';
+
+      document.getElementById('formTitle').textContent = 'Edit communication entry';
+      document.getElementById('formSubtitle').textContent = 'Editing ' + rec.ncn + ' — originally logged by ' + (rec.encoder || 'an unknown account') + '.';
+      document.getElementById('saveBtnLabel').textContent = 'Update entry';
+      document.getElementById('cancelFormBtn').textContent = 'Cancel edit';
+
+      openForm();
+      document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function resetForm() {
+      editingNcn = null;
+      document.getElementById('commForm').reset();
+      document.getElementById('fieldCommDate').value = todayIso();
+      document.getElementById('fieldEncoderDisplay').value = currentUsername;
+      updateNcnPreview();
+      toMS.clear();
+      modeMS.clear();
+      clearFieldErrors();
+
+      document.getElementById('formTitle').textContent = 'New communication entry';
+      document.getElementById('formSubtitle').textContent = 'Fields marked with * are required.';
+      document.getElementById('saveBtnLabel').textContent = 'Save entry';
+      document.getElementById('cancelFormBtn').textContent = 'Cancel';
+    }
+
+    // ========================= ARCHIVE / DELETE (communications) =========================
+
+    function handleArchive(ncn) {
+      var rec = allRecords.filter(function(r) { return r.ncn === ncn; })[0];
+      var isArchived = rec && rec.status === 'Archived';
+      openConfirm({
+        title: (isArchived ? 'Restore' : 'Archive') + ' ' + ncn + '?',
+        message: isArchived
+          ? 'This record will show under Active again.'
+          : 'Archived records stay in the sheet but are hidden from the Active view by default.',
+        confirmLabel: isArchived ? 'Restore' : 'Archive',
+        tone: 'amber',
+        onConfirm: function() {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              handleApiResponse(res, function(res) {
+                if (res && res.success) { showToast('success', res.message); loadRecords(); }
+                else showToast('error', (res && res.message) || 'Action failed.');
+              });
+            })
+            .withFailureHandler(function(err) { showToast('error', errMsg(err)); })
+            .archiveCommunication(sessionToken, ncn);
+        }
+      });
+    }
+
+    function handleDelete(ncn) {
+      openConfirm({
+        title: 'Permanently delete ' + ncn + '?',
+        message: 'This removes the row from the sheet entirely and cannot be undone. Consider archiving instead if you may need this later.',
+        confirmLabel: 'Delete permanently',
+        tone: 'brick',
+        onConfirm: function() {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              handleApiResponse(res, function(res) {
+                if (res && res.success) {
+                  showToast('success', res.message);
+                  if (editingNcn === ncn) { resetForm(); closeForm(); }
+                  loadRecords();
+                } else {
+                  showToast('error', (res && res.message) || 'Delete failed.');
+                }
+              });
+            })
+            .withFailureHandler(function(err) { showToast('error', errMsg(err)); })
+            .deleteCommunication(sessionToken, ncn);
+        }
+      });
+    }
+
+    // ========================= MANAGE USERS (admin only) =========================
+
+    function openUsersModal() {
+      var modal = document.getElementById('usersModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('addUserForm').reset();
+      hideAuthError('addUserError');
+      loadUsers();
+    }
+
+    function closeUsersModal() {
+      var modal = document.getElementById('usersModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function loadUsers() {
+      document.getElementById('usersLoading').classList.remove('hidden');
+      document.getElementById('usersEmpty').classList.add('hidden');
+      document.getElementById('usersTableBody').innerHTML = '';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('usersLoading').classList.add('hidden');
+          handleApiResponse(res, function(res) {
+            if (res && res.success) {
+              renderUsersTable(res.data || []);
+            } else {
+              showToast('error', (res && res.message) || 'Failed to load users.');
+            }
+          });
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('usersLoading').classList.add('hidden');
+          showToast('error', 'Failed to load users: ' + errMsg(err));
+        })
+        .adminListUsers(sessionToken);
+    }
+
+    function renderUsersTable(users) {
+      var tbody = document.getElementById('usersTableBody');
+      if (!users.length) {
+        tbody.innerHTML = '';
+        document.getElementById('usersEmpty').classList.remove('hidden');
+        return;
+      }
+      document.getElementById('usersEmpty').classList.add('hidden');
+      tbody.innerHTML = users.map(userRowHtml).join('');
+
+      tbody.querySelectorAll('.act-toggle-status').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          handleToggleUserStatus(btn.getAttribute('data-username'), btn.getAttribute('data-newstatus'));
+        });
+      });
+    }
+
+    function userRowHtml(u) {
+      var isDisabled = u.status === 'Disabled';
+      var statusBadge = isDisabled
+        ? '<span class="inline-flex items-center gap-1.5 text-[12px] text-muted"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Disabled</span>'
+        : '<span class="inline-flex items-center gap-1.5 text-[12px] text-teal-700"><span class="w-1.5 h-1.5 rounded-full bg-teal-600"></span>Active</span>';
+      var roleBadge = u.role === 'Admin'
+        ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[11.5px] font-medium">Admin</span>'
+        : '<span class="text-[12.5px] text-muted">User</span>';
+
+      return '<tr class="border-t border-line align-top">' +
+        '<td class="px-5 py-3 font-medium text-ink whitespace-nowrap">' + escapeHtml(u.username) + '</td>' +
+        '<td class="px-4 py-3 whitespace-nowrap">' + roleBadge + '</td>' +
+        '<td class="px-4 py-3 whitespace-nowrap">' + statusBadge + '</td>' +
+        '<td class="px-4 py-3 whitespace-nowrap text-muted">' + escapeHtml((u.createdAt || '').slice(0, 10)) + '</td>' +
+        '<td class="px-4 py-3 whitespace-nowrap text-right">' +
+          '<button type="button" data-username="' + escapeHtml(u.username) + '" data-newstatus="' + (isDisabled ? 'Active' : 'Disabled') + '" ' +
+            'class="act-toggle-status px-3 py-1.5 rounded-md border border-line text-[12.5px] font-medium hover:bg-canvas ' + (isDisabled ? 'text-teal-700' : 'text-brick-600') + '">' +
+            (isDisabled ? 'Enable' : 'Disable') +
+          '</button>' +
+        '</td>' +
+      '</tr>';
+    }
+
+    function handleToggleUserStatus(username, newStatus) {
+      openConfirm({
+        title: (newStatus === 'Disabled' ? 'Disable' : 'Enable') + ' "' + username + '"?',
+        message: newStatus === 'Disabled'
+          ? "They'll be signed out and won't be able to log in until re-enabled. Their past entries stay exactly as recorded."
+          : "They'll be able to log in again.",
+        confirmLabel: newStatus === 'Disabled' ? 'Disable' : 'Enable',
+        tone: newStatus === 'Disabled' ? 'brick' : 'amber',
+        onConfirm: function() {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              handleApiResponse(res, function(res) {
+                if (res && res.success) { showToast('success', res.message); loadUsers(); }
+                else showToast('error', (res && res.message) || 'Action failed.');
+              });
+            })
+            .withFailureHandler(function(err) { showToast('error', errMsg(err)); })
+            .adminSetUserStatus(sessionToken, username, newStatus);
+        }
+      });
+    }
+
+    function handleAddUser(e) {
+      e.preventDefault();
+      hideAuthError('addUserError');
+      var username = document.getElementById('newUserUsername').value.trim();
+      var password = document.getElementById('newUserPassword').value;
+      var confirmPassword = document.getElementById('newUserPasswordConfirm').value;
+      var role = document.getElementById('newUserRole').value;
+
+      if (password !== confirmPassword) {
+        showAuthError('addUserError', 'Passwords do not match.');
+        return;
+      }
+
+      setAddUserLoading(true);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setAddUserLoading(false);
+          handleApiResponse(res, function(res) {
+            if (res && res.success) {
+              showToast('success', res.message || 'Account created.');
+              document.getElementById('addUserForm').reset();
+              loadUsers();
+            } else {
+              showAuthError('addUserError', (res && res.message) || 'Could not create account.');
+            }
+          });
+        })
+        .withFailureHandler(function(err) {
+          setAddUserLoading(false);
+          showAuthError('addUserError', errMsg(err));
+        })
+        .adminCreateUser(sessionToken, username, password, role);
+    }
+
+    function setAddUserLoading(loading) {
+      var btn = document.getElementById('addUserBtn');
+      var spinner = document.getElementById('addUserSpinner');
+      var label = document.getElementById('addUserBtnLabel');
+      btn.disabled = loading;
+      spinner.classList.toggle('hidden', !loading);
+      label.textContent = loading ? 'Adding…' : 'Add user';
+    }
+
+    // ========================= CONFIRM MODAL =========================
+
+    function openConfirm(opts) {
+      pendingConfirmAction = opts.onConfirm;
+      document.getElementById('confirmTitle').textContent = opts.title;
+      document.getElementById('confirmMessage').textContent = opts.message;
+      var btn = document.getElementById('confirmOkBtn');
+      btn.textContent = opts.confirmLabel;
+      btn.className = 'px-3.5 py-2 rounded-md text-white text-[13px] font-medium ' +
+        (opts.tone === 'brick' ? 'bg-brick-600 hover:bg-brick-700' : 'bg-amber-600 hover:bg-amber-700');
+      var modal = document.getElementById('confirmModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeConfirm() {
+      pendingConfirmAction = null;
+      var modal = document.getElementById('confirmModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // ========================= TOASTS =========================
+
+    function showToast(type, message) {
+      var container = document.getElementById('toastContainer');
+      var el = document.createElement('div');
+      el.className = 'toast-in border rounded-md shadow-sm px-3.5 py-3 text-[13px] flex items-start gap-2.5 bg-white ' +
+        (type === 'success' ? 'border-teal-600/30' : 'border-brick-600/30');
+      el.innerHTML =
+        '<span class="mt-0.5 ' + (type === 'success' ? 'text-teal-600' : 'text-brick-600') + '">' + (type === 'success' ? ICONS.check : ICONS.alert) + '</span>' +
+        '<span class="flex-1 text-ink">' + escapeHtml(message) + '</span>' +
+        '<button type="button" class="toast-close text-muted hover:text-ink">' + ICONS.close + '</button>';
+      container.appendChild(el);
+      el.querySelector('.toast-close').addEventListener('click', function() { el.remove(); });
+      setTimeout(function() { el.remove(); }, 5000);
+    }
+  </script>
+</body>
+</html>
