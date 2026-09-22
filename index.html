@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Communication Tracking System</title>
@@ -48,9 +47,8 @@
   <!-- ===================== SIGN-IN GATE ===================== -->
   <!-- App-native login: a username/password stored (hashed, salted)
        in the hidden "Users" sheet tab. There's no self-service
-       sign-up — only an Admin can create accounts, from the "Manage
-       users" panel once signed in. See Code.gs for the one-time setup
-       that creates the first admin account. -->
+       sign-up — only an Admin can create accounts, from "Manage
+       users" once signed in. -->
   <div id="signInGate" class="min-h-screen flex items-center justify-center px-4 py-10">
     <div class="bg-white border border-line rounded-lg shadow-sm max-w-sm w-full p-6">
       <div class="text-center mb-5">
@@ -174,9 +172,6 @@
       <!-- ===================== FORM PANEL ===================== -->
       <section id="formPanel" class="bg-white border border-line rounded-lg overflow-hidden">
 
-        <!-- Collapsed state: just the call-to-action. This is what's
-             visible by default; the form itself only renders once the
-             person asks for it. -->
         <div id="formPanelCollapsed" class="px-5 py-5 flex items-center justify-between gap-3 flex-wrap">
           <p class="text-[12.5px] text-muted">Create a record for an outgoing or incoming communication.</p>
           <button type="button" id="newEntryBtn"
@@ -186,9 +181,6 @@
           </button>
         </div>
 
-        <!-- Expanded state: the full form. Shown for both "new entry"
-             and "edit" — formTitle/formSubtitle/saveBtnLabel switch
-             between the two modes. -->
         <div id="formPanelExpanded" class="hidden">
           <div class="px-5 py-4 border-b border-line">
             <h2 id="formTitle" class="text-[15px] font-semibold">New communication entry</h2>
@@ -410,6 +402,33 @@
   </div>
 
   <script>
+    // ========================= API CONNECTION =========================
+    // Paste the Apps Script Web App URL here — Deploy → Manage
+    // deployments in the Apps Script editor, ends in /exec. This is
+    // the ONLY place a URL needs to go; nothing else in this file or
+    // in Code.gs references it.
+    var API_URL = 'https://script.google.com/macros/s/AKfycbyjA6FAzyIFnK6Kp1ESdy7bITP7omyUQ9ydChT_K4drV_ZS2xEbCqx7scG1zvMOzrc/exec';
+
+    /**
+     * Every server call goes through this. It POSTs as text/plain on
+     * purpose — see Code.gs's header comment for why: Apps Script Web
+     * Apps can't handle a CORS preflight, and text/plain is what lets
+     * the browser skip it. Resolves to the parsed JSON response
+     * (whatever shape that action normally returns); rejects only on
+     * a genuine network failure or non-OK HTTP status, mirroring how
+     * google.script.run's withFailureHandler used to behave.
+     */
+    function callApi(action, params) {
+      return fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, params: params || [] })
+      }).then(function(response) {
+        if (!response.ok) throw new Error('Server responded with ' + response.status);
+        return response.json();
+      });
+    }
+
     // ========================= ICONS =========================
     var ICONS = {
       edit: '<svg viewBox="0 0 18 18" class="w-4 h-4" fill="none"><path d="M11.5 2.5l4 4L6.5 15.5H2.5v-4l9-9z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
@@ -502,9 +521,6 @@
     }
 
     // ========================= MULTI-SELECT COMPONENT =========================
-    // Renders a chip-based multi-select that supports picking from a
-    // pre-populated option list AND typing arbitrary custom entries.
-    // Returns { getValues, setValues, clear }.
     function createMultiSelect(container, opts) {
       var state = { selected: (opts.values || []).slice(), options: (opts.options || []).slice() };
 
@@ -616,9 +632,14 @@
       };
     }
 
-    // ========================= SIGN-IN GATE =========================
+    // ========================= BOOT =========================
 
     document.addEventListener('DOMContentLoaded', function() {
+      if (API_URL.indexOf('PASTE_YOUR_WEB_APP_URL_HERE') !== -1) {
+        showSetupNeededMessage();
+        return;
+      }
+
       document.getElementById('loginForm').addEventListener('submit', handleLoginSubmit);
       document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
 
@@ -630,8 +651,8 @@
       checking.classList.remove('hidden');
       checking.classList.add('flex');
 
-      google.script.run
-        .withSuccessHandler(function(res) {
+      callApi('getSessionUser', [storedToken])
+        .then(function(res) {
           if (res && res.success) {
             onAuthSuccess(storedToken, res.username, res.isAdmin);
           } else {
@@ -640,13 +661,23 @@
             document.getElementById('gateForms').classList.remove('hidden');
           }
         })
-        .withFailureHandler(function() {
+        .catch(function() {
           clearStoredToken_();
           checking.classList.add('hidden');
           document.getElementById('gateForms').classList.remove('hidden');
-        })
-        .getSessionUser(storedToken);
+        });
     });
+
+    /** Shown instead of the login form if API_URL was never filled in. */
+    function showSetupNeededMessage() {
+      document.getElementById('gateChecking').classList.add('hidden');
+      document.getElementById('gateForms').classList.add('hidden');
+      var card = document.getElementById('signInGate').querySelector('.bg-white');
+      var warn = document.createElement('p');
+      warn.className = 'text-[12.5px] text-brick-600 text-center leading-relaxed';
+      warn.textContent = 'This page needs its API_URL set. Open this file, find the API_URL constant near the top of the <script> tag, and paste in your Apps Script web app URL (it ends in /exec).';
+      card.appendChild(warn);
+    }
 
     function setAuthLoading(which, loading) {
       var btn = document.getElementById(which + 'SubmitBtn');
@@ -673,8 +704,8 @@
       var password = document.getElementById('loginPassword').value;
 
       setAuthLoading('login', true);
-      google.script.run
-        .withSuccessHandler(function(res) {
+      callApi('loginUser', [username, password])
+        .then(function(res) {
           setAuthLoading('login', false);
           if (res && res.success) {
             onAuthSuccess(res.token, res.username, res.isAdmin);
@@ -682,11 +713,10 @@
             showAuthError('loginError', (res && res.message) || 'Sign-in failed.');
           }
         })
-        .withFailureHandler(function(err) {
+        .catch(function(err) {
           setAuthLoading('login', false);
           showAuthError('loginError', errMsg(err));
-        })
-        .loginUser(username, password);
+        });
     }
 
     function onAuthSuccess(token, username, isAdminFlag) {
@@ -698,7 +728,7 @@
     }
 
     function handleSignOut() {
-      google.script.run.logoutUser(sessionToken); // fire and forget
+      callApi('logoutUser', [sessionToken]).catch(function() { /* best effort — nothing to do client-side if this fails */ });
       sessionToken = '';
       currentUsername = '';
       isAdminUser = false;
@@ -800,8 +830,8 @@
 
     function loadRecords() {
       showTableLoading(true);
-      google.script.run
-        .withSuccessHandler(function(res) {
+      callApi('getAllCommunications', [sessionToken])
+        .then(function(res) {
           showTableLoading(false);
           handleApiResponse(res, function(res) {
             if (res && res.success) {
@@ -813,11 +843,10 @@
             }
           });
         })
-        .withFailureHandler(function(err) {
+        .catch(function(err) {
           showTableLoading(false);
           showToast('error', 'Failed to load records: ' + errMsg(err));
-        })
-        .getAllCommunications(sessionToken);
+        });
     }
 
     function showTableLoading(loading) {
@@ -972,8 +1001,8 @@
 
       if (editingNcn) {
         data.ncn = editingNcn;
-        google.script.run
-          .withSuccessHandler(function(res) {
+        callApi('updateCommunication', [sessionToken, data])
+          .then(function(res) {
             setSaving(false);
             handleApiResponse(res, function(res) {
               if (res && res.success) {
@@ -986,14 +1015,13 @@
               }
             });
           })
-          .withFailureHandler(function(err) {
+          .catch(function(err) {
             setSaving(false);
             showToast('error', 'Update failed: ' + errMsg(err));
-          })
-          .updateCommunication(sessionToken, data);
+          });
       } else {
-        google.script.run
-          .withSuccessHandler(function(res) {
+        callApi('createCommunication', [sessionToken, data])
+          .then(function(res) {
             setSaving(false);
             handleApiResponse(res, function(res) {
               if (res && res.success) {
@@ -1006,11 +1034,10 @@
               }
             });
           })
-          .withFailureHandler(function(err) {
+          .catch(function(err) {
             setSaving(false);
             showToast('error', 'Save failed: ' + errMsg(err));
-          })
-          .createCommunication(sessionToken, data);
+          });
       }
     }
 
@@ -1077,15 +1104,14 @@
         confirmLabel: isArchived ? 'Restore' : 'Archive',
         tone: 'amber',
         onConfirm: function() {
-          google.script.run
-            .withSuccessHandler(function(res) {
+          callApi('archiveCommunication', [sessionToken, ncn])
+            .then(function(res) {
               handleApiResponse(res, function(res) {
                 if (res && res.success) { showToast('success', res.message); loadRecords(); }
                 else showToast('error', (res && res.message) || 'Action failed.');
               });
             })
-            .withFailureHandler(function(err) { showToast('error', errMsg(err)); })
-            .archiveCommunication(sessionToken, ncn);
+            .catch(function(err) { showToast('error', errMsg(err)); });
         }
       });
     }
@@ -1097,8 +1123,8 @@
         confirmLabel: 'Delete permanently',
         tone: 'brick',
         onConfirm: function() {
-          google.script.run
-            .withSuccessHandler(function(res) {
+          callApi('deleteCommunication', [sessionToken, ncn])
+            .then(function(res) {
               handleApiResponse(res, function(res) {
                 if (res && res.success) {
                   showToast('success', res.message);
@@ -1109,8 +1135,7 @@
                 }
               });
             })
-            .withFailureHandler(function(err) { showToast('error', errMsg(err)); })
-            .deleteCommunication(sessionToken, ncn);
+            .catch(function(err) { showToast('error', errMsg(err)); });
         }
       });
     }
@@ -1137,8 +1162,8 @@
       document.getElementById('usersEmpty').classList.add('hidden');
       document.getElementById('usersTableBody').innerHTML = '';
 
-      google.script.run
-        .withSuccessHandler(function(res) {
+      callApi('adminListUsers', [sessionToken])
+        .then(function(res) {
           document.getElementById('usersLoading').classList.add('hidden');
           handleApiResponse(res, function(res) {
             if (res && res.success) {
@@ -1148,11 +1173,10 @@
             }
           });
         })
-        .withFailureHandler(function(err) {
+        .catch(function(err) {
           document.getElementById('usersLoading').classList.add('hidden');
           showToast('error', 'Failed to load users: ' + errMsg(err));
-        })
-        .adminListUsers(sessionToken);
+        });
     }
 
     function renderUsersTable(users) {
@@ -1204,15 +1228,14 @@
         confirmLabel: newStatus === 'Disabled' ? 'Disable' : 'Enable',
         tone: newStatus === 'Disabled' ? 'brick' : 'amber',
         onConfirm: function() {
-          google.script.run
-            .withSuccessHandler(function(res) {
+          callApi('adminSetUserStatus', [sessionToken, username, newStatus])
+            .then(function(res) {
               handleApiResponse(res, function(res) {
                 if (res && res.success) { showToast('success', res.message); loadUsers(); }
                 else showToast('error', (res && res.message) || 'Action failed.');
               });
             })
-            .withFailureHandler(function(err) { showToast('error', errMsg(err)); })
-            .adminSetUserStatus(sessionToken, username, newStatus);
+            .catch(function(err) { showToast('error', errMsg(err)); });
         }
       });
     }
@@ -1231,8 +1254,8 @@
       }
 
       setAddUserLoading(true);
-      google.script.run
-        .withSuccessHandler(function(res) {
+      callApi('adminCreateUser', [sessionToken, username, password, role])
+        .then(function(res) {
           setAddUserLoading(false);
           handleApiResponse(res, function(res) {
             if (res && res.success) {
@@ -1244,11 +1267,10 @@
             }
           });
         })
-        .withFailureHandler(function(err) {
+        .catch(function(err) {
           setAddUserLoading(false);
           showAuthError('addUserError', errMsg(err));
-        })
-        .adminCreateUser(sessionToken, username, password, role);
+        });
     }
 
     function setAddUserLoading(loading) {
